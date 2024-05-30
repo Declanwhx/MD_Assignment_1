@@ -8,6 +8,9 @@ import scicpy.constants as co
 TODO: read this first: https://nsweb.tn.tudelft.nl/~gsteele/TN2513_Tips/Creating%20a%20numpy%20array%20in%20a%20loop.html
 It is a super small coding excercise about problems of appending and why it is bad practice if you can avoid it.
 It also gives some insight in how you can use 'vectorisation' to speed up calculations. I will give some examples of this as well.
+
+Besides that, the overall logic in your code looks pretty good already. You can sample a bit less (see the montecarlo function) but most improvements
+are in really using vectorised numpy calculations instead of list operations and not appending.
 """
 
 ######################### CONSTANTS #########################
@@ -297,21 +300,25 @@ def startConf(disp, mass_density, l_domain):
     print(no_of_entities)
 
     # Generating coordinates for molecules
-    molecules_coordinates = [[], [], []]
-    for i in range(0, no_of_entities):
-        for j in range(0, 3):
-            molecules_coordinates[j].append(
-                round((np.random.random_sample() * l_domain), 5))
-
+    # molecules_coordinates = [[], [], []]
+    # for i in range(0, no_of_entities):
+    #     for j in range(0, 3):
+    #         molecules_coordinates[j].append(
+    #             round((np.random.random_sample() * l_domain), 5))
+    # FIX: This does all particles at once with vectorisation.
+    molecules_coordinates = np.random.uniform(
+        0, l_domain, size=(no_of_entities, 3))
     # Recommended number of moves
     Nint = no_of_entities * 50
     # accepted_moves = 0
 
     # Invoking Nint number of displacements to initialize the simulation box (Prevent overlaps)
     for i in range(0, Nint):
+        # TODO: printing is expensive, so only use it to debug.
         print("Configuration: " + str(i + 1))
         MC_cycle = translate(disp, no_of_entities,
                              molecule_density, molecules_coordinates, l_domain)
+        # TODO: you do not have to unpack results like this. molecules_coordinates, acc = translate(disp ....) will work too.
         molecules_coordinates = MC_cycle[0]
         # accepted_moves += MC_cycle[1]
 
@@ -329,7 +336,8 @@ def startConf(disp, mass_density, l_domain):
     plt.show()
     """
 
-    # Writing new .xyz file -> Might be wrong? But not important
+    # Writing new .xyz file -> Might be wrong? But not important.
+    # TODO: in assignment 2, remco provided an example code for this, but it looks quite ok already. ase.io.write() or some pandas setup would work too by the way.
     final_molecules_coordinates = open('generated_box.xyz', "w")
     final_molecules_coordinates.write(str(no_of_entities) + "\n")
     final_molecules_coordinates.write("box.pdb \n")
@@ -360,7 +368,7 @@ def MC_NVT(disp, mass_density, l_domain):
     Nint = 500000
     # Array of cycles for graph plots
     cycles = []
-
+    # TODO: make these allocations numpy arrays of the correct size beforehand.
     # Arrays to contain sample variables from the respective configuration
     U_tot = []
     P_tot = []
@@ -370,7 +378,9 @@ def MC_NVT(disp, mass_density, l_domain):
                  molecules_coordinates, l_domain)[0])
     P_tot.append(totalEnergy(no_of_entities, molecule_density,
                  molecules_coordinates, l_domain)[1])
-
+    # TODO: This looks olready quite good. However there can be some improvements. It is very expensive to compute the
+    # total energy and pressure all the time. You track it already a bit smarter but still will end up doing the N^2 expensive calculations 50% of the trial moves.
+    # it is perfectly fine (even better) to only sample the total energy and pressure every maybe 200 or even 1000 trial moves (independend of acceptance or not).
     for i in range(0, Nint):
         cycles.append(i+1)
         print("Configuration: " + str(i+1))
