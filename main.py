@@ -72,7 +72,7 @@ def totalEnergy(no_of_entities, molecule_density, molecules_coordinates, l_domai
                 sr2 = sigma_sq / r_ij_sq
                 sr6 = sr2 * sr2 * sr2
                 sr12 = sr6 * sr6
-                U_lj = U_lj + (sr12 - sr6)
+                U_lj += (sr12 - sr6)
                 dU_dr += (sr6 - 2 * sr12)
                 # Note: This should have been divided by the cutoff radius but because the virial equation
                 # requires that we multiply by the cutoff radius again, that cancels out.
@@ -122,8 +122,8 @@ def singleParticleEnergy(particle_no, no_of_entities, molecule_density, molecule
             sr2 = sigma_sq / r_ij_sq
             sr6 = sr2 * sr2 * sr2
             sr12 = sr6 * sr6
-            U_lj = U_lj + (sr12 - sr6)
-            # dU_dr = dU_dr + (sr6 - 2 * sr12)
+            U_lj += (sr12 - sr6)
+            # dU_dr += (sr6 - 2 * sr12)
             # Note: This should have been divided by the cutoff radius but because the virial equation
             # requires that we multiply by the cutoff radius again, that cancels out.
         # Need to check for overlaps because when we generate random coordinates, overlaps can occur and if not
@@ -233,10 +233,10 @@ def startConf(disp, mass_density, l_domain):
         molecules_coordinates = MC_cycle[0]
         # accepted_moves += MC_cycle[1]
 
-    # rate_of_acceptance = (accepted_moves / Nint) * 100
-    # print(rate_of_acceptance)
+    # rate_of_acceptance = round((accepted_moves / Nint) * 100,2)
+    # print("The rate of acceptance is: ", rate_of_acceptance, "%")
 
-    # Code can be modified to take displacement values in an array and then generate plots
+    # Code can be modified to take delta values in an array and then generate plots
     """
     plt.scatter(disp, rate_of_acceptance)
     plt.title("Rate of acceptance vs Δ (N = 500,000)")
@@ -247,6 +247,7 @@ def startConf(disp, mass_density, l_domain):
     plt.show()
     """
 
+    # Writing new .xyz file -> Might be wrong? But not important
     final_molecules_coordinates = open('generated_box.xyz', "w")
     final_molecules_coordinates.write(str(no_of_entities) + "\n")
     final_molecules_coordinates.write("box.pdb \n")
@@ -299,9 +300,9 @@ def MC_NVT(disp, mass_density, l_domain):
             U_tot.append(system_variables[0])
             P_tot.append(system_variables[1])
             
-        average_of_system_variables = averages(i + 1, sum(U_tot), sum(P_tot))
-        U_tot_average.append(average_of_system_variables[0])
-        P_tot_average.append(average_of_system_variables[1])
+    average_of_system_variables = averages(i + 1, sum(U_tot), sum(P_tot))
+    U_tot_average.append(average_of_system_variables[0])
+    P_tot_average.append(average_of_system_variables[1])
 
     end = time.time()
 
