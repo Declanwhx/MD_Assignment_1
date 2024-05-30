@@ -301,8 +301,8 @@ def MC_NVT(disp, mass_density, l_domain):
             P_tot.append(system_variables[1])
             
     average_of_system_variables = averages(i + 1, sum(U_tot), sum(P_tot))
-    U_tot_average.append(average_of_system_variables[0])
-    P_tot_average.append(average_of_system_variables[1])
+    U_tot_average = append(average_of_system_variables[0])
+    P_tot_average = append(average_of_system_variables[1])
 
     end = time.time()
 
