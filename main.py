@@ -110,7 +110,7 @@ def singleParticleEnergy(particle_no, no_of_entities, molecule_density, molecule
         # If condition implemented to prevent calculation of self-interaction
         if particle_no == i:
             continue
-        # The following 3 lines are a mathematical means of deriving the closest atom image to current atom per axis
+        # The following 3 lines are a mathematical means of deriving the closest molecule/image to current molecule per axis
         # Based on these 3 dimensions, a radial distance can be obtained
         x = (molecules_coordinates[0][i] - molecules_coordinates[0][particle_no] + l_domain / 2) % l_domain - l_domain / 2
         y = (molecules_coordinates[1][i] - molecules_coordinates[1][particle_no] + l_domain / 2) % l_domain - l_domain / 2
@@ -283,10 +283,6 @@ def MC_NVT(disp, mass_density, l_domain):
     U_tot.append(totalEnergy(no_of_entities, molecule_density, molecules_coordinates, l_domain)[0])
     P_tot.append(totalEnergy(no_of_entities, molecule_density, molecules_coordinates, l_domain)[1])
 
-    # Creation of averaged variables to store values from each cycle -> For graph plots
-    U_tot_average = []
-    P_tot_average = []
-
     for i in range(0,Nint):
         cycles.append(i+1)
         print("Configuration: " + str(i+1))
@@ -302,13 +298,14 @@ def MC_NVT(disp, mass_density, l_domain):
             system_variables = totalEnergy(no_of_entities, molecule_density, molecules_coordinates, l_domain)
             U_tot.append(system_variables[0])
             P_tot.append(system_variables[1])
+            
         average_of_system_variables = averages(i + 1, sum(U_tot), sum(P_tot))
         U_tot_average.append(average_of_system_variables[0])
         P_tot_average.append(average_of_system_variables[1])
 
     end = time.time()
 
-    plt.scatter(U_tot_average, cycles)
+    plt.scatter(U_tot, cycles)
     plt.title("Total Energy vs No. of cycles")
     plt.ylabel("U [J]")
     plt.xlabel("Number of cycles [-]")
@@ -322,9 +319,9 @@ def MC_NVT(disp, mass_density, l_domain):
     return U_tot_average, P_tot_average
 
 
-# N = readFile('box.xyz')[0]
-# rho = readFile('box.xyz')[1]
-# coordinates = readFile('box.xyz')[2]
+# N = readFile('box.xyz', 30)[0]
+# rho = readFile('box.xyz', 30)[1]
+# coordinates = readFile('box.xyz', 30)[2]
 
 # totalEnergy(N, rho, coordinates)
 # singleParticleEnergy(361, N, rho, coordinates)
