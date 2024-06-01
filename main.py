@@ -5,7 +5,7 @@ import scipy.constants as co
 
 ######################### CONSTANTS #########################
 # Boltzmann Constant
-k_B = 1.38065 * 10 ** -23  # [J/K]
+k_B = co.k  # [J/K]
 # Lennard-Jones variables -> Depth of well and collisional diameter
 epslj = 148 * co.k  # [J]
 sigma = 3.73  # [Angstroms]
@@ -17,7 +17,7 @@ avogadros_constant = co.N_A
 dof = 3  # [-]
 # System temperature in Kelvins
 T = 150  # [K]
-beta = 1 / (k_B * T)  # [1/J]
+beta = 1 / (co.k * T)  # [1/J]
 
 # Converts mass density (kg/m^3) to molecule density (1/Angstrom^3)
 def convertMassDensity(mass_density):
