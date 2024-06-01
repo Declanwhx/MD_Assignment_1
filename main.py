@@ -66,6 +66,8 @@ def totalEnergy(molecules_coordinates, l_domain):
         r_ij_sq = np.sum(d * d, axis=1)
         # print(type(r_ij_sq))
 
+        # THIS SR2 IS NOT COMPUTING FOR SOME REASON EVEN THOUGH THE SAME SYNTAX WORKED FOR SINGLE PARTICLE 
+        # AND THEY BOTH TAKE IN A NUMPY ARRAY
         sr2 = sigma_sq / r_ij_sq[r_ij_sq <= r_cut ** 2]  # filter out all r2 larger than rcut squared and get sigma^2/r^2 for all particles j>i
         sr6 = sr2 ** 3
         sr12 = sr6 ** 2
