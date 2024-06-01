@@ -1,11 +1,11 @@
-import numpy as np
-import time
-import matplotlib.pyplot as plt
 import scipy.constants as co
+import matplotlib.pyplot as plt
+import time
+import numpy as np
 
 ######################### CONSTANTS #########################
 # Boltzmann Constant
-k_B = 1.38065 * 10 ** -23  # [J/K]
+# k_B = 1.38065 * 10 ** -23  # [J/K]  # FIX: delete line
 # Lennard-Jones variables -> Depth of well and collisional diameter
 epslj = 148 * co.k  # [J]
 sigma = 3.73  # [Angstroms]
@@ -17,11 +17,12 @@ avogadros_constant = 6.022 * 10 ** 23
 dof = 3  # [-]
 # System temperature in Kelvins
 T = 150  # [K]
-beta = 1 / (k_B * T)  # [1/J]
+beta = 1 / (co.k * T)  # [1/J] FIX: changed to co.k
 
 
 def convertMassDensity(mass_density):
-    molecule_density = ((mass_density / CH4_molar_mass) * avogadros_constant) / (10 ** 30)
+    molecule_density = ((mass_density / CH4_molar_mass)
+                        * avogadros_constant) / (10 ** 30)
     return molecule_density
 
 
@@ -35,6 +36,8 @@ def readFile(file, l_domain):
     molecule_density = no_of_entities / domain_volume  # [1/Angstroms^3]
 
     # Reading and writing coordinates into an array for Lennard-Jones Potential calculations
+    # TODO: here you still use append, it doesnt affect your compute time a lot as you only need it once
+    # however, you can do it in a single line.
     molecules_coordinates = [[], [], []]
     input_coordinates = input_file.readlines()[1:]
     for line in input_coordinates:
@@ -51,7 +54,7 @@ def totalEnergy(molecules_coordinates, l_domain):
     # Simulation box size, note, we shall work with angstroms [Angstroms]
     domain_volume = l_domain ** 3
     # Molecule density
-    molecule_density = no_of_entities / domain_volume # [1/Angstroms^3]
+    molecule_density = no_of_entities / domain_volume  # [1/Angstroms^3]
     # Cutoff radius to prevent duplicate interactions [Angstroms]
     r_cut = 14
 
@@ -62,16 +65,19 @@ def totalEnergy(molecules_coordinates, l_domain):
 
     for (i, coordinates_i) in enumerate(molecules_coordinates):
         # list containing Δx, Δy, Δz for each pair
-        d = (molecules_coordinates[i + 1:] - coordinates_i + l_domain / 2) % l_domain + l_domain / 2
+        d = (molecules_coordinates[i + 1:] - coordinates_i + l_domain / 2) % l_domain - l_domain / 2
+        # FIX: your last l_domain/2 was added not subtracted
+        # this caused your distance to be much larger, leading to a larger r^2 which was above cutoff distance.
         r_ij_sq = np.sum(d * d, axis=1)
         # print(type(r_ij_sq))
 
-        # THIS SR2 IS NOT COMPUTING FOR SOME REASON EVEN THOUGH THE SAME SYNTAX WORKED FOR SINGLE PARTICLE 
+        # THIS SR2 IS NOT COMPUTING FOR SOME REASON EVEN THOUGH THE SAME SYNTAX WORKED FOR SINGLE PARTICLE
         # AND THEY BOTH TAKE IN A NUMPY ARRAY
-        sr2 = sigma_sq / r_ij_sq[r_ij_sq <= r_cut ** 2]  # filter out all r2 larger than rcut squared and get sigma^2/r^2 for all particles j>i
+        # filter out all r2 larger than rcut squared and get sigma^2/r^2 for all particles j>i
+        sr2 = sigma_sq / r_ij_sq[r_ij_sq <= r_cut ** 2]
         sr6 = sr2 ** 3
         sr12 = sr6 ** 2
-        print(sr2)
+        # print(sr2)  FIX: now this is not needed anymore
 
         U_lj += np.sum(sr12 - sr6)
         dU_dr += np.sum(sr6 - 2 * sr12)
@@ -101,16 +107,18 @@ def totalEnergy(molecules_coordinates, l_domain):
 
     U_lj = 4 * epslj * U_lj  # [J]
     # print(U_lj)
-    U_ljtail = no_of_entities * (8 / 3) * np.pi * epslj * molecule_density * sigma_cu * ((1 / 3) * (sr3 * sr3 * sr3) - sr3) # [J]
+    U_ljtail = no_of_entities * (8 / 3) * np.pi * epslj * molecule_density * \
+        sigma_cu * ((1 / 3) * (sr3 * sr3 * sr3) - sr3)  # [J]
     # print(U_ljtail)
     # U_kin = 0.5 * co.k * T * dof * no_of_entities  # [J]
     # print(U_kin)
-    U_tot = U_lj + U_ljtail # [J]
+    U_tot = U_lj + U_ljtail  # [J]
     # print(U_tot)
 
     # 1.3
     dU_dr = 24 * epslj * dU_dr
-    P_tot = (molecule_density * k_B * T - (1 / (3 * domain_volume)) * dU_dr) * (10 ** 30)  # [Pa]
+    P_tot = (molecule_density * co.k* T - (1 / (3 * domain_volume))
+             * dU_dr) * (10 ** 30)  # [Pa] FIX: changed to co.k
     # print(P)
     return U_tot, P_tot
 
@@ -123,7 +131,7 @@ def singleParticleEnergy(particle_no, molecules_coordinates, l_domain):
     # Simulation box size, note, we shall work with angstroms [Angstroms]
     domain_volume = l_domain ** 3
     # Molecule density
-    molecule_density = no_of_entities/domain_volume # [1/Angstroms^3]
+    molecule_density = no_of_entities/domain_volume  # [1/Angstroms^3]
     # Cutoff radius to prevent duplicate interactions [Angstroms]
     r_cut = 14
 
@@ -134,12 +142,13 @@ def singleParticleEnergy(particle_no, molecules_coordinates, l_domain):
     # and also reduces the original coordinates of the particle to a 0 list
     # to work around the 0 list, we set the rij value for that particle to be r_cut so that when we implement
     # the cut-off distance, this self-interaction is removed. In NumPy this is called broadcasting
-    d = (molecules_coordinates - molecules_coordinates[particle_no] + l_domain / 2) % l_domain - l_domain / 2
+    d = (molecules_coordinates -
+         molecules_coordinates[particle_no] + l_domain / 2) % l_domain - l_domain / 2
     # print(d)
     r_ij_sq = np.sum(d * d, axis=1)
     r_ij_sq[particle_no] = r_cut ** 2
     # print(r_ij_sq)
-    print(type(r_ij_sq))
+    # print(type(r_ij_sq))  # FIX: no printing anymore
     if np.any(r_ij_sq[:,] == 0):
         U_tot = 1e300
         return U_tot
@@ -150,7 +159,8 @@ def singleParticleEnergy(particle_no, molecules_coordinates, l_domain):
     sr6 = sr2 ** 3
     sr12 = sr6 ** 2
 
-    U_ljtail = (8 / 3) * np.pi * epslj * molecule_density * sigma_cu * ((1 / 3) * (sr3 * sr3 * sr3) - sr3)  # [J]
+    U_ljtail = (8 / 3) * np.pi * epslj * molecule_density * \
+        sigma_cu * ((1 / 3) * (sr3 * sr3 * sr3) - sr3)  # [J]
     # print(U_ljtail)
     U_lj = 4 * epslj * np.sum(sr12 - sr6) + U_ljtail  # [J]
     # print(U_lj)
@@ -177,17 +187,20 @@ def translate(disp, molecules_coordinates, l_domain):
     accepted_move = 0
 
     # Calculate the single particle energy prior to displacement
-    U_o = singleParticleEnergy(random_particle, molecules_coordinates, l_domain)
+    U_o = singleParticleEnergy(
+        random_particle, molecules_coordinates, l_domain)
     U_tot, P_tot = totalEnergy(molecules_coordinates, l_domain)
     # print("Utotold: ", U_tot)
     # Generates a displacement array of 3
     # Delta setting -> 50% should be achieved with this value for LJ potential
     d = np.random.uniform(-disp, disp, size=3)
     # print(d)
-    molecules_coordinates[random_particle,:] = (molecules_coordinates[random_particle] + d) % l_domain
+    molecules_coordinates[random_particle, :] = (
+        molecules_coordinates[random_particle] + d) % l_domain
     # print(molecules_coordinates)
     # Calculate the single particle energy post displacement
-    U_n = singleParticleEnergy(random_particle, molecules_coordinates, l_domain)
+    U_n = singleParticleEnergy(
+        random_particle, molecules_coordinates, l_domain)
     # print(U_o)
     # print(U_n)
     U_tot, P_tot = totalEnergy(molecules_coordinates, l_domain)
@@ -201,7 +214,8 @@ def translate(disp, molecules_coordinates, l_domain):
         accepted_move += 1
     else:
         # Reverts coordinates back to original if move is rejected
-        molecules_coordinates[random_particle,:] = (molecules_coordinates[random_particle] - d) % l_domain
+        molecules_coordinates[random_particle, :] = (
+            molecules_coordinates[random_particle] - d) % l_domain
 
     return molecules_coordinates, accepted_move
 
@@ -214,7 +228,8 @@ def startConf(disp, mass_density, l_domain):
     # print(no_of_entities)
 
     # Generating coordinates for molecules
-    molecules_coordinates = np.random.uniform(0, l_domain, size=(no_of_entities, 3))
+    molecules_coordinates = np.random.uniform(
+        0, l_domain, size=(no_of_entities, 3))
     # print(molecules_coordinates)
     # Recommended number of moves
     # Nint = no_of_entities * 50
@@ -224,12 +239,13 @@ def startConf(disp, mass_density, l_domain):
 
     # Invoking Nint number of displacements to initialize the simulation box (Prevent overlaps)
     for i in range(0, Nint):
-        print("Configuration: " + str(i + 1))
+        # print("Configuration: " + str(i + 1))
         # print(molecules_coordinates)
-        molecules_coordinates = translate(disp, molecules_coordinates, l_domain)[0]
+        molecules_coordinates = translate(
+            disp, molecules_coordinates, l_domain)[0]
         accepted_moves += translate(disp, molecules_coordinates, l_domain)[1]
 
-    rate_of_acceptance = round((accepted_moves / Nint) * 100,2)
+    rate_of_acceptance = round((accepted_moves / Nint) * 100, 2)
     # print("The rate of acceptance is: ", rate_of_acceptance, "%")
 
     # Code can be modified to take delta values in an array and then generate plots
@@ -266,10 +282,11 @@ def MC_NVT(disp, mass_density, l_domain):
     start = time.time()
 
     # Create box with specified mass_density and l_domain params using the startConf function
-    molecule_density, no_of_entities, molecules_coordinates = startConf(disp, mass_density, l_domain)
+    molecule_density, no_of_entities, molecules_coordinates = startConf(
+        disp, mass_density, l_domain)
 
     # No. of MC cycles
-    Nint = 500000
+    Nint = 5000  # FIX: prepaired for a short check.
     # Intervals for sampling
     intervals = 500
     # Total sample no. if we sample for every 500 cycles
@@ -282,8 +299,9 @@ def MC_NVT(disp, mass_density, l_domain):
     P_tot = np.zeros(sample_no+1)
 
     for i in range(0, Nint):
-        print("Configuration: " + str(i + 1))
-        molecules_coordinates, accepted_move = translate(disp, molecules_coordinates, l_domain)
+        # print("Configuration: " + str(i + 1))
+        molecules_coordinates, accepted_move = translate(
+            disp, molecules_coordinates, l_domain)
         # Conditional sampling -> Take samples at only every 500 cycles
         if i == 0:
             U_tot[0], P_tot[0] = totalEnergy(molecules_coordinates, l_domain)
@@ -291,7 +309,8 @@ def MC_NVT(disp, mass_density, l_domain):
             print(i)
             cycle_index = (i+1)/intervals
             cycles[int(cycle_index)] = i+1
-            U_tot[int(cycle_index)], P_tot[int(cycle_index)] = totalEnergy(molecules_coordinates, l_domain)
+            U_tot[int(cycle_index)], P_tot[int(cycle_index)] = totalEnergy(
+                molecules_coordinates, l_domain)
 
     print(U_tot)
     average_of_system_variables = averages(Nint, sum(U_tot), sum(P_tot))
@@ -309,7 +328,8 @@ def MC_NVT(disp, mass_density, l_domain):
 
     print("The average total energy is: ", U_tot_average, "J")
     print("The average total pressure is: ", P_tot_average, "Pa")
-    print("The time of execution of above program is :", (end - start) / 60, "mins")
+    print("The time of execution of above program is :",
+          (end - start) / 60, "mins")
 
     return U_tot_average, P_tot_average
 
@@ -323,4 +343,4 @@ def MC_NVT(disp, mass_density, l_domain):
 # translate(N, rho, coordinates)
 startConf(0.45, 358.4, 30)
 
- #MC_NVT(0.45,358.4,30)
+MC_NVT(0.45,358.4,30)
