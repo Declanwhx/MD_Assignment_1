@@ -12,19 +12,19 @@ sigma = 3.73  # [Angstroms]
 sigma_sq = sigma ** 2  # [Angstroms^2]
 sigma_cu = sigma ** 3  # [Angstroms^3]
 CH4_molar_mass = 16.04 * (10 ** -3)
-avogadros_constant = 6.022 * 10 ** 23
+avogadros_constant = co.N_A
 # Degrees of freedom
 dof = 3  # [-]
 # System temperature in Kelvins
 T = 150  # [K]
 beta = 1 / (k_B * T)  # [1/J]
 
-
+# Converts mass density (kg/m^3) to molecule density (1/Angstrom^3)
 def convertMassDensity(mass_density):
     molecule_density = ((mass_density / CH4_molar_mass) * avogadros_constant) / (10 ** 30)
-    return molecule_density
+    return molecule_density # (1/Angstrom^3)
 
-
+# Will amend later. Don't need it for now.
 def readFile(file, l_domain):
     input_file = open(file, "r")
     # Reading and writing number of atoms/molecules in simulation box
@@ -67,7 +67,8 @@ def totalEnergy(molecules_coordinates, l_domain):
         # print(type(r_ij_sq))
 
         # THIS SR2 IS NOT COMPUTING FOR SOME REASON EVEN THOUGH THE SAME SYNTAX WORKED FOR SINGLE PARTICLE 
-        # AND THEY BOTH TAKE IN A NUMPY ARRAY
+        # AND THEY BOTH TAKE IN A NUMPY ARRAY, TRIED TO USE NP.WHERE AS WELL, DIDN'T WORK EITHER
+        # sr2 = np.where(r_ij_sq <= r_cut ** 2, sigma_sq/r_ij_sq, 0)
         sr2 = sigma_sq / r_ij_sq[r_ij_sq <= r_cut ** 2]  # filter out all r2 larger than rcut squared and get sigma^2/r^2 for all particles j>i
         sr6 = sr2 ** 3
         sr12 = sr6 ** 2
@@ -75,6 +76,8 @@ def totalEnergy(molecules_coordinates, l_domain):
 
         U_lj += np.sum(sr12 - sr6)
         dU_dr += np.sum(sr6 - 2 * sr12)
+
+    # ORIGINAL BLOCK OF CODE DOES NOT GIVE DESIRED U V CYCLES PLOT
     """
     for i in range(0, no_of_entities):
         # Starting from i+1 to prevent duplicate interactions
@@ -145,6 +148,7 @@ def singleParticleEnergy(particle_no, molecules_coordinates, l_domain):
         return U_tot
 
     # returns list of sr2 values where r_ij_sq < r_cut^2
+    # sr2 = np.where(r_ij_sq <= r_cut ** 2, sigma_sq/r_ij_sq, 0)
     sr2 = sigma_sq / r_ij_sq[r_ij_sq <= r_cut ** 2]
     # print(sr2)
     sr6 = sr2 ** 3
@@ -178,8 +182,7 @@ def translate(disp, molecules_coordinates, l_domain):
 
     # Calculate the single particle energy prior to displacement
     U_o = singleParticleEnergy(random_particle, molecules_coordinates, l_domain)
-    U_tot, P_tot = totalEnergy(molecules_coordinates, l_domain)
-    # print("Utotold: ", U_tot)
+    
     # Generates a displacement array of 3
     # Delta setting -> 50% should be achieved with this value for LJ potential
     d = np.random.uniform(-disp, disp, size=3)
@@ -190,8 +193,6 @@ def translate(disp, molecules_coordinates, l_domain):
     U_n = singleParticleEnergy(random_particle, molecules_coordinates, l_domain)
     # print(U_o)
     # print(U_n)
-    U_tot, P_tot = totalEnergy(molecules_coordinates, l_domain)
-    # print("Utotnew: ", U_tot)
 
     # Energy change caused by displacement
     delta_U = U_n - U_o
